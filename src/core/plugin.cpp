@@ -74,7 +74,9 @@ struct PluginManager::PluginManagerPrivate {
 
     void unload_all() {
         for (auto& [_, module] : modules) {
-            #if defined(_WIN32)
+            #if defined(MI_STATIC_PLUGINS)
+                (void) module;
+            #elif defined(_WIN32)
                 FreeLibrary((HMODULE) module.handle);
             #else
                 dlclose(module.handle);
@@ -88,6 +90,9 @@ struct PluginManager::PluginManagerPrivate {
             return it->second;
 
         ModuleInfo module;
+#if defined(MI_STATIC_PLUGINS)
+        Throw("Plugin \"%s\" is not statically registered!", name);
+#endif
 
         // Build the full plugin file name
         fs::path filename = fs::path("plugins") / name;

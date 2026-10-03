@@ -20,6 +20,7 @@
 /* libpng */
 #include <png.h>
 
+#if !defined(MI_GUEST)
 /* libjpeg */
 extern "C" {
     #include <jpeglib.h>
@@ -61,6 +62,7 @@ extern "C" {
 #  pragma clang diagnostic pop
 #elif defined(__GNUG__)
 #  pragma GCC diagnostic pop
+#endif
 #endif
 
 NAMESPACE_BEGIN(mitsuba)
@@ -769,8 +771,10 @@ Bitmap::FileFormat Bitmap::detect_file_format(Stream *stream) {
         format = FileFormat::JPEG;
     } else if (png_sig_cmp(start, 0, 8) == 0) {
         format = FileFormat::PNG;
+#if !defined(MI_GUEST)
     } else if (Imf::isImfMagic((const char *) start)) {
         format = FileFormat::OpenEXR;
+#endif
     } else {
         // Check for a TGAv2 file
         char footer[18];
@@ -911,6 +915,14 @@ std::string Bitmap::to_string() const {
 // -----------------------------------------------------------------------------
 //   OpenEXR bitmap I/O
 // -----------------------------------------------------------------------------
+
+#if defined(MI_GUEST)
+// The guest build carries no OpenEXR or libjpeg.
+void Bitmap::read_exr(Stream *) { Throw("OpenEXR is not built into this guest"); }
+void Bitmap::write_exr(Stream *, int) const { Throw("OpenEXR is not built into this guest"); }
+void Bitmap::read_jpeg(Stream *) { Throw("JPEG is not built into this guest"); }
+void Bitmap::write_jpeg(Stream *, int) const { Throw("JPEG is not built into this guest"); }
+#else
 
 class EXRIStream : public Imf::IStream {
 public:
@@ -1476,6 +1488,8 @@ void Bitmap::write_exr(Stream *stream, int quality) const {
 //   JPEG bitmap I/O
 // -----------------------------------------------------------------------------
 
+#endif
+
 /// Identify a stream in a log message, preferably by file name
 static std::string stream_name(const Stream *stream) {
     if (const FileStream *fs = dynamic_cast<const FileStream *>(stream))
@@ -1483,6 +1497,7 @@ static std::string stream_name(const Stream *stream) {
     return std::string(stream->class_name());
 }
 
+#if !defined(MI_GUEST)
 static const size_t jpeg_buffer_size = 0x8000;
 
 typedef struct {
@@ -1709,6 +1724,7 @@ void Bitmap::write_jpeg(Stream *stream, int quality) const {
     jpeg_finish_compress(&cinfo);
     jpeg_destroy_compress(&cinfo);
 }
+#endif
 
 // -----------------------------------------------------------------------------
 //   PNG bitmap I/O
@@ -2618,7 +2634,9 @@ std::ostream &operator<<(std::ostream &os, Bitmap::AlphaTransform value) {
 
 
 void Bitmap::static_initialization() {
+#if !defined(MI_GUEST)
     IlmThread::ThreadPool::globalThreadPool().setThreadProvider(new EXRThreadPool());
+#endif
 }
 
 void Bitmap::static_shutdown() { }

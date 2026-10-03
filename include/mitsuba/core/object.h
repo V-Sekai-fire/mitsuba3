@@ -383,11 +383,18 @@ using PluginRegisterFn = void (*)(std::string_view name, std::string_view varian
 using PluginEntryFn = void (*)(std::string_view name, PluginRegisterFn);
 
 /// Entry point of plugins, registers provided classes with the plugin manager
+#if defined(MI_STATIC_PLUGINS)
+#define MI_EXPORT_PLUGIN(Name)                                                 \
+    void init_plugin_##Name(std::string_view name, PluginRegisterFn fn) {      \
+        MI_REGISTER_PLUGIN(fn, name, Name);                                    \
+    }
+#else
 #define MI_EXPORT_PLUGIN(Name)                                                 \
     extern "C" MI_EXPORT void init_plugin(std::string_view name,               \
                                           PluginRegisterFn fn) {               \
         MI_REGISTER_PLUGIN(fn, name, Name);                                    \
     }
+#endif
 
 // -----------------------------------------------------------------------------
 //                          Scene Traversal API
